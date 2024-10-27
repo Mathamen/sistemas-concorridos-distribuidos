@@ -9,39 +9,37 @@ fn handle_client(mut stream: TcpStream) {
     let mut data = [0 as u8; 60]; 
     while match stream.read(&mut data) {
         Ok(size) if size > 0 => {
-
             let received_message = String::from_utf8_lossy(&data[0..size]).trim().to_string();
-            println!("Received message: {}", received_message); // So para log mesmo aqui.
+            println!("Received message: {}", received_message); // Apenas log.
 
-            
             let thread_id = thread::current().id();
-
-            // resposta aqui po 
+            
+            // Resposta ao cliente
             let response = if received_message == "marco" {
-                // easter egg aqui KKKKKKKK
+                // Easter egg
                 format!("polo (Serviço prestado pela thread {:?})", thread_id)
             } else if received_message == "Pode me prestar um serviço?" {
-                format!("Serviço entregue! Serviço prestado pela thread {:?}", thread_id)  // Mensagem correta com thread ID
+                format!("Serviço entregue! Serviço prestado pela thread {:?}", thread_id)
             } else {
-                format!("Solicitação inválida pela thread {:?}", thread_id)  // Não está formatado certo. Coloquei para ser exatamente o que pedia na tarefa ou então o easter egg
+                format!("Solicitação inválida pela thread {:?}", thread_id)
             };
 
-         
+            // Envia resposta ao cliente
             if let Err(e) = stream.write_all(response.as_bytes()) {
-                println!("Falha ao retornar para o cliente: {}", e); // Rust exige tratamento de erro né
+                println!("Falha ao retornar para o cliente: {}", e);
                 false
             } else {
                 true
             }
         }
         Ok(_) => {
-            println!("Cliente desconectado em: {}", stream.peer_addr().unwrap()); // So para mostrar as diferentes portas
+            println!("Cliente desconectado em: {}", stream.peer_addr().unwrap());
             false
         }
         Err(e) => {
-            println!("Ocorreu o erro: {}. Terminando a conexão {}", e, stream.peer_addr().unwrap());
+            println!("Erro: {}. Terminando a conexão {}", e, stream.peer_addr().unwrap());
             if let Err(e) = stream.shutdown(Shutdown::Both) {
-                println!("Erro ao fechar conexão: {}", e); // Nunca vi esse erro mas preciso pois ok / err
+                println!("Erro ao fechar a conexão: {}", e);
             }
             false
         }
@@ -51,20 +49,20 @@ fn handle_client(mut stream: TcpStream) {
 pub fn main() {
     println!("Modo provedor");
     let listener = TcpListener::bind(SocketAddrV4::new(ADDR, PORT)).unwrap();
-    println!("Listening on {:?}", listener);
+    let local_addr = listener.local_addr().unwrap(); // Obtem o IP e porta do servidor
+    println!("Servidor escutando em: {}", local_addr); // Mostra o IP e porta
 
     for stream in listener.incoming() {
         match stream {
             Ok(stream) => {
-                println!("New connection: {}", stream.peer_addr().unwrap());
-                // Criando a thread que vai server o cliente aqui
+                println!("Nova conexão de: {}", stream.peer_addr().unwrap());
                 thread::spawn(move || {
                     handle_client(stream);
                 });
             }
-            Err(err) => println!("Connection failed: {:?}", err),
+            Err(err) => println!("Falha na conexão: {:?}", err),
         }
     }
 
-    println!("Server shutting down.");
+    println!("Servidor encerrando.");
 }
